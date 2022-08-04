@@ -1,0 +1,185 @@
+import 'dart:io';
+import 'dart:isolate';
+import 'dart:ui';
+
+import 'package:flutter/material.dart';
+import 'package:flutter_downloader/flutter_downloader.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:princes/widgets/medium_text.dart';
+import 'package:princes/widgets/small_text.dart';
+import 'package:princes/yt_downloader/post_result.dart';
+import '../widgets/appbar.dart';
+import '../widgets/navigation_drawer_widget.dart';
+
+class YTDownload extends StatefulWidget {
+  const YTDownload({Key? key}) : super(key: key);
+
+  @override
+  State<YTDownload> createState() => _YTDownloadState();
+}
+
+class _YTDownloadState extends State<YTDownload> {
+  // late PostResult postResult;
+  String title = "";
+  String thumb = "";
+  String filesize_audio = "";
+  String filesize_video = "";
+  String audio = "";
+  String audio_asli = "";
+  String video = "";
+  String video_asli = "";
+  bool isLoading = false;
+
+  final textController = TextEditingController();
+  final padding = EdgeInsets.all(8.0);
+  ReceivePort _port = ReceivePort();
+
+  @override
+  void initState() {
+    IsolateNameServer.registerPortWithName(_port.sendPort, 'downloader_send_port');
+    _port.listen((dynamic data) {
+      String id = data[0];
+      DownloadTaskStatus status = data[1];
+      int progress = data[2];
+      setState((){ });
+    });
+
+    FlutterDownloader.registerCallback(downloadCallback);
+    super.initState();
+  }
+
+  Future download(String url) async {
+    await FlutterDownloader.enqueue(
+      url: 'your download link',
+      savedDir: 'the path of directory where you want to save downloaded files',
+      showNotification: true, // show download progress in status bar (for Android)
+      openFileFromNotification: true, // click on notification to open downloaded file (for Android)
+    );
+  }
+  @pragma('vm:entry-point')
+  static void downloadCallback(String id, DownloadTaskStatus status, int progress) {
+    final SendPort? send = IsolateNameServer.lookupPortByName('downloader_send_port');
+    send!.send([id, status, progress]);
+  }
+
+
+
+  @override
+  void dispose() {
+    // TODO: implement dispose
+    IsolateNameServer.removePortNameMapping('downloader_send_port');
+    super.dispose();
+    // PostResult();
+    // postResult;
+    textController.dispose();
+  }
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      drawer: NavigationDrawer(),
+      appBar: CustomAppBar(),
+      body: Center(
+        child: Column(
+          children: [
+            Padding(
+              padding: padding,
+              child: Column(
+                children: [
+                  Image.network(
+                    thumb != "" ? thumb : "https://i.ibb.co/qYTFsDx/placeholder.png",
+                    height: 150,
+                    width: 150,),
+                  SmallText(text: title,),
+                  SizedBox(height: 20,),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      ElevatedButton(
+                        onPressed: () {
+                          print("downloadAudio");
+                        },
+                        child: Row(
+                          children: [
+                            MediumText(text: "MP3", size: 16,),
+                            SizedBox(width: 10,),
+                            SmallText(text: filesize_audio, size: 12,)
+                          ],
+                        ),
+                      ),
+                      SizedBox(width: 20,),
+                      ElevatedButton(
+                        onPressed: (){
+                          print("downloadVidio");
+                        },
+                        child: Row(
+                          children: [
+                            MediumText(text: "MP4", size: 16,),
+                            SizedBox(width: 10,),
+                            SmallText(text: filesize_video, size: 12,)
+                          ],
+                        ),
+                      )
+                    ],
+                  ),
+                ],
+              ),
+            ),
+
+            Padding(padding: EdgeInsets.all(8.0),
+              child:  TextField(
+                controller: textController,
+                decoration: InputDecoration(
+                  contentPadding: EdgeInsets.all(8.0),
+                  hintText: "Paste link youtubenya disini cantik",
+                  suffixIcon: IconButton(
+                    icon: Icon(Icons.search),
+                    onPressed: () async {
+                      setState(() {
+                        isLoading = true;
+                      });
+                      // await PostResult.connectToApi(textController.text).then((value) {
+                      //   postResult = value;
+                      //   setState(() {
+                      //     title = postResult.title!;
+                      //     thumb = postResult.thumb!;
+                      //     filesize_audio = postResult.filesize_audio!;
+                      //     filesize_video = postResult.filesize_video!;
+                      //     audio = postResult.audio!;
+                      //     audio_asli = postResult.audio_asli!;
+                      //     video = postResult.video!;
+                      //     video_asli = postResult.video_asli!;
+                      //     isLoading = false;
+                      //   });
+                      // });
+                    },
+                  ),
+                ),
+                // onSubmitted: (url) => PostResult.connectToApi(url).then((value) {
+                //   postResult = value;
+                //   setState(() {
+                //     title = postResult.title!;
+                //     thumb = postResult.thumb!;
+                //     filesize_audio = postResult.filesize_audio!;
+                //     filesize_video = postResult.filesize_video!;
+                //     audio = postResult.audio!;
+                //     audio_asli = postResult.audio_asli!;
+                //     video = postResult.video!;
+                //     video_asli = postResult.video_asli!;
+                //   });
+                // }),
+                textInputAction: TextInputAction.search,
+              ),
+            ),
+            SizedBox(height: 20,),
+            isLoading ? Center(
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: CircularProgressIndicator(),
+              ),
+            ) : Image.asset('assets/image/ecamusic.jpg', height: 50,)
+          ],
+        ),
+      ),
+    );
+  }
+}
